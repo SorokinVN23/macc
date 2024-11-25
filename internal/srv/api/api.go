@@ -21,7 +21,7 @@ func NewMux() *http.ServeMux {
 }
 
 func update(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodPost {
 		http.Error(w, "invalid method", http.StatusBadRequest)
 	}
 
