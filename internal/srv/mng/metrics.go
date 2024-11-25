@@ -5,7 +5,7 @@ import (
 )
 
 var metricsTypes = map[string]*Description{
-	"guage":   {ValueFloat64, OperationReplace},
+	"gauge":   {ValueFloat64, OperationReplace},
 	"counter": {ValueInt64, OperationAdd},
 }
 
