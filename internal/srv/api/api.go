@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/SorokinVN23/macc/internal/srv/adapter"
-	"github.com/SorokinVN23/macc/internal/srv/mng"
+	"macc/internal/adapter"
+	"macc/internal/srv/mng"
 )
 
 var ad mng.Adapter = adapter.NewMemoryAdapter()

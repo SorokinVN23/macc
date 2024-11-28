@@ -1,3 +1,3 @@
-module github.com/SorokinVN23/macc
+module macc
 
 go 1.22.3

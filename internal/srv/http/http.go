@@ -3,7 +3,7 @@ package http
 import (
 	"net/http"
 
-	"github.com/SorokinVN23/macc/internal/srv/api"
+	"macc/internal/srv/api"
 )
 
 func Start() {
