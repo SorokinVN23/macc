@@ -1,18 +1,29 @@
 package adapter
 
-import "errors"
+import (
+	"errors"
+	"sync"
+)
 
 type MemoryAdapter struct {
+	mutex      *sync.Mutex
 	forInt64   map[string]map[string]int64
 	forFloat64 map[string]map[string]float64
 }
 
 func NewMemoryAdapter() MemoryAdapter {
-	ad := MemoryAdapter{map[string]map[string]int64{}, map[string]map[string]float64{}}
+	ad := MemoryAdapter{
+		mutex:      &sync.Mutex{},
+		forInt64:   map[string]map[string]int64{},
+		forFloat64: map[string]map[string]float64{},
+	}
 	return ad
 }
 
 func (adapter MemoryAdapter) GetInt64(mname string, mtype string) (interface{}, error) {
+	adapter.mutex.Lock()
+	defer adapter.mutex.Unlock()
+
 	var volume int64 = 0
 	typsForName, isExist := adapter.forInt64[mname]
 	if !isExist {
@@ -26,6 +37,9 @@ func (adapter MemoryAdapter) GetInt64(mname string, mtype string) (interface{}, 
 }
 
 func (adapter MemoryAdapter) GetFloat64(mname string, mtype string) (interface{}, error) {
+	adapter.mutex.Lock()
+	defer adapter.mutex.Unlock()
+
 	var volume float64 = 0
 	typsForName, isExist := adapter.forFloat64[mname]
 	if !isExist {
@@ -39,6 +53,9 @@ func (adapter MemoryAdapter) GetFloat64(mname string, mtype string) (interface{}
 }
 
 func (adapter MemoryAdapter) SetInt64(mname string, mtype string, mvolume interface{}) error {
+	adapter.mutex.Lock()
+	defer adapter.mutex.Unlock()
+
 	volume, success := mvolume.(int64)
 	if !success {
 		return errors.New("invalid type mvolume for SetInt64")
@@ -53,6 +70,9 @@ func (adapter MemoryAdapter) SetInt64(mname string, mtype string, mvolume interf
 }
 
 func (adapter MemoryAdapter) SetFloat64(mname string, mtype string, mvolume interface{}) error {
+	adapter.mutex.Lock()
+	defer adapter.mutex.Unlock()
+
 	volume, success := mvolume.(float64)
 	if !success {
 		return errors.New("invalid type mvolume for SetFloat64")

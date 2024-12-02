@@ -50,5 +50,12 @@ func getNecessaryMetrics() map[string]MetricType {
 }
 
 type MetricsProducer interface {
-	GetNewMetricsValue(necessaryMetrics map[string]MetricType) map[string]Metric
+	GetNewMetricsValue(necessaryMetrics map[string]MetricType) (map[string]Metric, error)
+}
+
+type Adapter interface {
+	GetInt64(mname string, mtype string) (interface{}, error)
+	GetFloat64(mname string, mtype string) (interface{}, error)
+	SetInt64(mname string, mtype string, mvolume interface{}) error
+	SetFloat64(mname string, mtype string, mvolume interface{}) error
 }
