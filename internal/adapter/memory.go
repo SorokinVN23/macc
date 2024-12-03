@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"errors"
+	dom "macc/internal/domains"
 	"sync"
 )
 
@@ -18,6 +19,27 @@ func NewMemoryAdapter() MemoryAdapter {
 		forFloat64: map[string]map[string]float64{},
 	}
 	return ad
+}
+
+func (adapter MemoryAdapter) GetList() ([]dom.Metric, error) {
+	adapter.mutex.Lock()
+	defer adapter.mutex.Unlock()
+
+	list := make([]dom.Metric, 0)
+
+	for name, data := range adapter.forInt64 {
+		for mtype, mvalue := range data {
+			list = append(list, dom.Metric{MName: name, MType: mtype, MValue: mvalue})
+		}
+	}
+
+	for name, data := range adapter.forFloat64 {
+		for mtype, mvalue := range data {
+			list = append(list, dom.Metric{MName: name, MType: mtype, MValue: mvalue})
+		}
+	}
+
+	return list, nil
 }
 
 func (adapter MemoryAdapter) GetInt64(mname string, mtype string) (interface{}, error) {
