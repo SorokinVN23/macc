@@ -1,7 +1,14 @@
 package main
 
-import "macc/internal/srv/http"
+import (
+	"fmt"
+	dom "macc/internal/domains"
+	"macc/internal/srv/http"
+)
 
 func main() {
-	http.Start()
+	settings := &dom.SrvSettings{}
+	GetFlags(settings)
+	fmt.Printf("%+v", settings)
+	http.Start(settings)
 }

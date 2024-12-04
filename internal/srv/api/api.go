@@ -17,9 +17,10 @@ var manager mng.Manager = mng.NewManager(ad)
 var tpl = template.Must(template.ParseFiles("../../static/list.html"))
 
 func Update(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+	/* if r.Method != http.MethodPost {
 		http.Error(w, "invalid method", http.StatusBadRequest)
-	}
+		return
+	} */
 
 	mtype := chi.URLParam(r, "mtype")
 	mname := chi.URLParam(r, "mname")

@@ -9,11 +9,6 @@ import (
 	"time"
 )
 
-const (
-	reportInterval = 10
-	poolInterval   = 2
-)
-
 type Manager struct {
 	producer         MetricsProducer
 	adapter          Adapter
@@ -38,7 +33,7 @@ func (manager Manager) GetCollecting() bool {
 	return manager.collecting
 }
 
-func (manager Manager) StartSending(srvurl string) {
+func (manager Manager) StartSending(srvurl string, reportInterval int) {
 	manager.sending = true
 	go func() {
 		defer func() {
@@ -54,20 +49,31 @@ func (manager Manager) StartSending(srvurl string) {
 				}
 
 				url1, _ := strings.CutSuffix(srvurl, "/")
-				url := fmt.Sprintf("%s/update/%s/%s/%v", url1, mtype, name, mvalue)
+				url := fmt.Sprintf("http://%s/update/%s/%s/%v", url1, mtype, name, mvalue)
 
 				resp, err := manager.client.Post(url, "text/plain", nil)
 				if err != nil {
-					panic(err)
+					fmt.Printf("%s\n", url)
+					fmt.Printf("%+v\n", err)
+					continue
 				}
 				if resp.StatusCode != 200 {
-					panic(fmt.Sprintf("resp.StatusCode %v\n", resp.StatusCode))
+					fmt.Printf("%s\n", url)
+					fmt.Printf("resp.StatusCode %v\n", resp.StatusCode)
+					continue
 				}
 
-				fmt.Printf("%s %v\n", url, resp.StatusCode)
+				if mtype == MTCounter {
+					err = manager.reset(name, mtype)
+					if err != nil {
+						panic(err)
+					}
+				}
+
+				//fmt.Printf("%s %v\n", url, resp.StatusCode)
 			}
 
-			time.Sleep(reportInterval * time.Second)
+			time.Sleep(time.Duration(reportInterval) * time.Second)
 		}
 	}()
 }
@@ -80,7 +86,7 @@ func (manager Manager) StopCollecting() {
 	manager.collecting = false
 }
 
-func (manager Manager) StartCollecting() {
+func (manager Manager) StartCollecting(poolInterval int) {
 	manager.collecting = true
 	go func() {
 		defer func() {
@@ -100,7 +106,7 @@ func (manager Manager) StartCollecting() {
 				}
 			}
 
-			time.Sleep(poolInterval * time.Second)
+			time.Sleep(time.Duration(poolInterval) * time.Second)
 		}
 	}()
 }
@@ -134,6 +140,24 @@ func (manager Manager) getFromStore(name string, mtype MetricType) (interface{},
 		return currentVolume, nil
 	}
 	return nil, fmt.Errorf("invalid mtype %+v", mtype)
+}
+
+func (manager Manager) reset(name string, mtype MetricType) error {
+	switch mtype {
+	case MTCounter:
+		err := manager.adapter.SetInt64(name, string(mtype), int64(0))
+		if err != nil {
+			return err
+		}
+		return nil
+	case MTGauge:
+		err := manager.adapter.SetFloat64(name, string(mtype), float64(0))
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	return fmt.Errorf("invalid mtype %+v", mtype)
 }
 
 func (manager Manager) updateStore(name string, metric Metric) error {
