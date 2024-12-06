@@ -22,7 +22,5 @@ func start() {
 	manager.StartSending(settings.Address, settings.ReportInterval)
 
 	time.Sleep(10 * time.Second)
-	for !manager.GetCollecting() && !manager.GetSending() {
-		time.Sleep(10 * time.Second)
-	}
+	manager.WaitGroup.Wait()
 }
