@@ -6,6 +6,7 @@ import (
 	"macc/utils"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -13,102 +14,111 @@ type Manager struct {
 	producer         MetricsProducer
 	adapter          Adapter
 	necessaryMetrics map[string]MetricType
-	collecting       bool
 	client           *http.Client
-	sending          bool
+	Collecting       *chan struct{}
+	Sending          *chan struct{}
+	WaitGroup        *sync.WaitGroup
 }
 
 func New(producer MetricsProducer, adapter Adapter) Manager {
 	manager := Manager{producer: producer, adapter: adapter}
 	manager.necessaryMetrics = getNecessaryMetrics()
 	manager.client = &http.Client{}
+	manager.WaitGroup = &sync.WaitGroup{}
 	return manager
 }
 
-func (manager Manager) GetSending() bool {
-	return manager.sending
-}
-
-func (manager Manager) GetCollecting() bool {
-	return manager.collecting
-}
-
 func (manager Manager) StartSending(srvurl string, reportInterval int) {
-	manager.sending = true
+	stopChan := make(chan struct{})
+	manager.WaitGroup.Add(1)
+
 	go func() {
 		defer func() {
-			manager.sending = false
+			close(stopChan)
+			manager.WaitGroup.Done()
 		}()
 
-		for manager.sending {
+		for {
+			select {
+			case <-stopChan:
+				return
+			default:
+				for name, mtype := range manager.necessaryMetrics {
+					mvalue, err := manager.getFromStore(name, mtype)
+					if err != nil {
+						panic(err)
+					}
 
-			for name, mtype := range manager.necessaryMetrics {
-				mvalue, err := manager.getFromStore(name, mtype)
+					url1, _ := strings.CutSuffix(srvurl, "/")
+					url := fmt.Sprintf("http://%s/update/%s/%s/%v", url1, mtype, name, mvalue)
+
+					resp, err := manager.client.Post(url, "text/plain", nil)
+					if err != nil {
+						fmt.Printf("%s\n", url)
+						fmt.Printf("%+v\n", err)
+						continue
+					}
+					if resp.StatusCode != 200 {
+						fmt.Printf("%s\n", url)
+						fmt.Printf("resp.StatusCode %v\n", resp.StatusCode)
+						continue
+					}
+
+					if mtype == MTCounter {
+						err = manager.reset(name, mtype)
+						if err != nil {
+							panic(err)
+						}
+					}
+				}
+
+				time.Sleep(time.Duration(reportInterval) * time.Second)
+			}
+		}
+	}()
+	manager.Sending = &stopChan
+}
+
+func (manager Manager) StopSending() {
+	close(*manager.Sending)
+}
+
+func (manager Manager) StopCollecting() {
+	close(*manager.Collecting)
+}
+
+func (manager Manager) StartCollecting(poolInterval int) {
+	stopChan := make(chan struct{})
+	manager.WaitGroup.Add(1)
+
+	go func() {
+		defer func() {
+			close(stopChan)
+			manager.WaitGroup.Done()
+		}()
+
+		for {
+			select {
+			case <-stopChan:
+				return
+			default:
+				list, err := manager.producer.GetNewMetricsValue(manager.necessaryMetrics)
 				if err != nil {
 					panic(err)
 				}
 
-				url1, _ := strings.CutSuffix(srvurl, "/")
-				url := fmt.Sprintf("http://%s/update/%s/%s/%v", url1, mtype, name, mvalue)
-
-				resp, err := manager.client.Post(url, "text/plain", nil)
-				if err != nil {
-					fmt.Printf("%s\n", url)
-					fmt.Printf("%+v\n", err)
-					continue
-				}
-				if resp.StatusCode != 200 {
-					fmt.Printf("%s\n", url)
-					fmt.Printf("resp.StatusCode %v\n", resp.StatusCode)
-					continue
-				}
-
-				if mtype == MTCounter {
-					err = manager.reset(name, mtype)
+				for name, metric := range list {
+					err := manager.updateStore(name, metric)
 					if err != nil {
 						panic(err)
 					}
 				}
 
-				//fmt.Printf("%s %v\n", url, resp.StatusCode)
+				time.Sleep(time.Duration(poolInterval) * time.Second)
 			}
-
-			time.Sleep(time.Duration(reportInterval) * time.Second)
 		}
 	}()
-}
-
-func (manager Manager) StopSending() {
-	manager.sending = false
-}
-
-func (manager Manager) StopCollecting() {
-	manager.collecting = false
-}
-
-func (manager Manager) StartCollecting(poolInterval int) {
-	manager.collecting = true
-	go func() {
-		defer func() {
-			manager.collecting = false
-		}()
-
-		for manager.collecting {
-			list, err := manager.producer.GetNewMetricsValue(manager.necessaryMetrics)
-			if err != nil {
-				panic(err)
-			}
-
-			for name, metric := range list {
-				err := manager.updateStore(name, metric)
-				if err != nil {
-					panic(err)
-				}
-			}
-
-			time.Sleep(time.Duration(poolInterval) * time.Second)
-		}
-	}()
+	manager.Collecting = &stopChan
 }
 
 func ConvertByType(mt MetricType, val interface{}) (interface{}, error) {

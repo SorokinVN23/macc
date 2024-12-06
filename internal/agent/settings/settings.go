@@ -21,18 +21,18 @@ func getEnv(obj *dom.AgentSettings) {
 		obj.Address = addres
 	}
 
-	r_interval, isExist := os.LookupEnv("REPORT_INTERVAL")
+	rInterval, isExist := os.LookupEnv("REPORT_INTERVAL")
 	if isExist {
-		i, err := strconv.ParseUint(r_interval, 10, 64)
+		i, err := strconv.ParseUint(rInterval, 10, 64)
 		if err != nil {
 			panic(err)
 		}
 		obj.ReportInterval = int(i)
 	}
 
-	p_interval, isExist := os.LookupEnv("POLL_INTERVAL")
+	pInterval, isExist := os.LookupEnv("POLL_INTERVAL")
 	if isExist {
-		i, err := strconv.ParseUint(p_interval, 10, 64)
+		i, err := strconv.ParseUint(pInterval, 10, 64)
 		if err != nil {
 			panic(err)
 		}
