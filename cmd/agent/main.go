@@ -4,13 +4,16 @@ import (
 	"macc/internal/adapter"
 	mng "macc/internal/agent/mng"
 	"macc/internal/agent/prd"
-	dom "macc/internal/domains"
+	setpack "macc/internal/agent/settings"
 	"time"
 )
 
 func main() {
-	settings := &dom.AgentSettings{}
-	GetFlags(settings)
+	start()
+}
+
+func start() {
+	settings := setpack.GetSettings()
 
 	memAd := adapter.NewMemoryAdapter()
 	producer := prd.Producer{}

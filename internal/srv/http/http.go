@@ -10,9 +10,6 @@ import (
 )
 
 func Start(settings *dom.SrvSettings) {
-	//mux := api.NewMux()
-	//http.ListenAndServe(":8080", mux)
-
 	router := chi.NewRouter()
 	router.Get("/", api.List)
 	router.Post("/update/{mtype}/{mname}/{mvalue}", api.Update)
