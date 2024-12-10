@@ -58,6 +58,8 @@ func (manager Manager) StartSending(srvurl string, reportInterval int) {
 						fmt.Printf("%+v\n", err)
 						continue
 					}
+
+					resp.Body.Close()
 					if resp.StatusCode != 200 {
 						fmt.Printf("%s\n", url)
 						fmt.Printf("resp.StatusCode %v\n", resp.StatusCode)
@@ -131,7 +133,7 @@ func ConvertByType(mt MetricType, val interface{}) (interface{}, error) {
 		return interface{}(v), err
 	}
 
-	return nil, fmt.Errorf("Invalid MetricType %+v in ConvertByType ", mt)
+	return nil, fmt.Errorf("invalid MetricType %+v in ConvertByType ", mt)
 }
 
 func (manager Manager) getFromStore(name string, mtype MetricType) (interface{}, error) {
